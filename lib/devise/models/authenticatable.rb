@@ -10,6 +10,14 @@ module Devise
     #
     #   * +authentication_keys+: parameters used for authentication. By default [:email].
     #
+    #   * +request_keys+: parameters from the request object used for authentication.
+    #     By specifying a symbol (which should be a request method), it will automatically be
+    #     passed to find_for_authentication method and considered in your model lookup.
+    #
+    #     For instance, if you set :request_keys to [:subdomain], :subdomain will be considered
+    #     as key on authentication. This can also be a hash where the value is a boolean expliciting
+    #     if the value is required or not.
+    #
     #   * +http_authenticatable+: if this model allows http authentication. By default true.
     #     It also accepts an array specifying the strategies that should allow http.
     #
@@ -66,7 +74,7 @@ module Devise
       end
 
       module ClassMethods
-        Devise::Models.config(self, :authentication_keys, :http_authenticatable, :params_authenticatable)
+        Devise::Models.config(self, :authentication_keys, :request_keys, :http_authenticatable, :params_authenticatable)
 
         def params_authenticatable?(strategy)
           params_authenticatable.is_a?(Array) ?
@@ -94,19 +102,25 @@ module Devise
 
         # Find an initialize a record setting an error if it can't be found.
         def find_or_initialize_with_error_by(attribute, value, error=:invalid) #:nodoc:
-          if value.present?
-            conditions = { attribute => value }
-            record = find(:first, :conditions => conditions)
-          end
+          find_or_initialize_with_errors([attribute], { attribute => value }, error)
+        end
 
+        # Find an initialize a group of attributes based on a list of required attributes.
+        def find_or_initialize_with_errors(required_attributes, attributes, error=:invalid) #:nodoc:
+          attributes = attributes.slice(*required_attributes)
+          attributes.delete_if { |key, value| value.blank? }
+
+          if attributes.size == required_attributes.size
+            record = find(:first, :conditions => attributes)
+          end
+          
           unless record
             record = new
-            if value.present?
-              record.send(:"#{attribute}=", value)
-            else
-              error = :blank
+            record.send(:attributes=, attributes, false)
+
+            required_attributes.each do |key|
+              record.errors.add(key, attributes[key].present? ? error : :blank)
             end
-            record.errors.add(attribute, error)
           end
 
           record

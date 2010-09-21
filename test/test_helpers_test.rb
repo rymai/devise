@@ -53,6 +53,35 @@ class TestHelpersTest < ActionController::TestCase
     assert_redirected_to new_user_session_path
   end
 
+  test "defined Warden after_authentication callback should not be called when sign_in is called" do
+    begin
+      Warden::Manager.after_authentication do |user, auth, opts|
+        flunk "callback was called while it should not"
+      end
+
+      user = create_user
+      user.confirm!
+      sign_in user
+    ensure
+      Warden::Manager._after_set_user.pop
+    end
+  end
+
+  test "defined Warden before_logout callback should not be called when sign_out is called" do
+    begin
+      Warden::Manager.before_logout do |user, auth, opts|
+        flunk "callback was called while it should not"
+      end
+      user = create_user
+      user.confirm!
+
+      sign_in user
+      sign_out user
+    ensure
+      Warden::Manager._before_logout.pop
+    end
+  end
+
   test "allows to sign in with different users" do
     first_user = create_user
     first_user.confirm!

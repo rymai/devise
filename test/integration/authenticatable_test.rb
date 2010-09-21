@@ -310,7 +310,7 @@ class AuthenticationOthersTest < ActionController::IntegrationTest
   test 'sign in with script name' do
     assert_nothing_raised do
       get new_user_session_path, {}, "SCRIPT_NAME" => "/omg"
-      fill_in "email", "user@test.com"
+      fill_in "email", :with => "user@test.com"
     end
   end
 
@@ -330,6 +330,47 @@ class AuthenticationOthersTest < ActionController::IntegrationTest
     sign_in_as_user :visit => "/devise_for/sign_in"
     assert warden.authenticated?(:user)
     assert_not warden.authenticated?(:admin)
+  end
+end
+
+class AuthenticationRequestKeysTest < ActionController::IntegrationTest
+  test 'request keys are used on authentication' do
+    host! 'foo.bar.baz'
+
+    swap Devise, :request_keys => [:subdomain] do
+      User.expects(:find_for_authentication).with(:subdomain => 'foo', :email => 'user@test.com').returns(create_user)
+      sign_in_as_user
+      assert warden.authenticated?(:user)
+    end
+  end
+
+  test 'invalid request keys raises NoMethodError' do
+    swap Devise, :request_keys => [:unknown_method] do
+      assert_raise NoMethodError do
+        sign_in_as_user
+      end
+
+      assert_not warden.authenticated?(:user)
+    end
+  end
+
+  test 'blank request keys cause authentication to abort' do
+    host! 'test.com'
+
+    swap Devise, :request_keys => [:subdomain] do
+      sign_in_as_user
+      assert_contain "Invalid email or password."
+      assert_not warden.authenticated?(:user)
+    end
+  end
+
+  test 'blank request keys cause authentication to abort unless if marked as not required' do
+    host! 'test.com'
+
+    swap Devise, :request_keys => { :subdomain => false } do
+      sign_in_as_user
+      assert warden.authenticated?(:user)
+    end
   end
 end
 
