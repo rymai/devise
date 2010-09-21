@@ -42,7 +42,7 @@ class DatabaseAuthenticatableTest < ActiveSupport::TestCase
   test 'should generate a base64 hash using SecureRandom for password salt not containing any of -+=_/' do
     swap_with_encryptor User, :sha1 do
       ActiveSupport::SecureRandom.expects(:base64).with(15).returns('=fri-endly+to/ken_')
-      assert_equal 'friendlytoken', new_user.password_salt
+      assert_equal 'AfriAendlyAtoAkenA', new_user.password_salt
     end
   end
 
