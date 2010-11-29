@@ -170,6 +170,10 @@ module Devise
   mattr_accessor :sign_out_all_scopes
   @@sign_out_all_scopes = false
 
+  # When set to false, routes are not eager loaded, allowing to reload routes in 'Spork.each_run' for example.
+  mattr_accessor :eager_load_routes
+  @@eager_load_routes = true
+
   def self.use_default_scope=(*)
     ActiveSupport::Deprecation.warn "config.use_default_scope is deprecated and removed from Devise. " <<
       "If you are using non conventional routes in Devise, all you need to do is to pass the devise " <<
